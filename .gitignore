@@ -1,0 +1,26 @@
+# Build outputs and generated binaries
+build/
+bin/
+
+# Legacy 1990s binaries and materials (educational reverse-engineering source artifacts)
+legacy/
+
+# Compiler and editor artifacts
+*.obj
+*.o
+*.exe
+*.pdb
+*.ilk
+*.asm
+*.tmp
+*.log
+
+# IDE & OS-specific files
+.vscode/
+.vs/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

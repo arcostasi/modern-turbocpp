@@ -1,0 +1,27 @@
+{
+  "compiler": {
+    "llvmBinPath": "C:\\LLVM\\bin",
+    "cxxCompiler": "clang++.exe",
+    "cCompiler": "clang.exe",
+    "clangFormat": "clang-format.exe",
+    "cppStandard": "c++23",
+    "optLevel": "-O2",
+    "warningFlags": "-Wall -Wextra",
+    "extraFlags": "-D_CRT_SECURE_NO_WARNINGS",
+    "outDir": ".",
+    "includeDirs": "",
+    "libDirs": "",
+    "programArgs": "",
+    "processTimeoutSeconds": 30
+  },
+  "editor": {
+    "showLineNumbers": true,
+    "autoIndent": true,
+    "syntaxHighlight": true,
+    "tabSize": 4,
+    "useTabs": false,
+    "autoSyntaxCheckOnSave": true,
+    "autoCloseDelimiters": true,
+    "colorTheme": "BorlandBlue"
+  }
+}
