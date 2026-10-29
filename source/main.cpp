@@ -1,5 +1,6 @@
 #include "turboc/app.h"
 #include <iostream>
+#include <clocale>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -7,9 +8,10 @@
 #endif
 
 int main(int argc, char** argv) {
+    // Enable UTF-8 for C/C++ runtime and Windows Console
+    std::setlocale(LC_ALL, ".UTF-8");
 #ifdef _WIN32
     SetConsoleTitleA("Modern Turbo C++ [LLVM C++23]");
-    // Enable UTF-8 console output
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 #endif

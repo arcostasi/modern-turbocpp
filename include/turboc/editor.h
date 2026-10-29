@@ -9,6 +9,7 @@
 #define Uses_TFileEditor
 #define Uses_TEditor
 #define Uses_TDrawBuffer
+#define Uses_TText
 #define Uses_TEvent
 #define Uses_TRect
 #define Uses_TScrollBar
@@ -19,6 +20,10 @@
 #include <tvision/tv.h>
 
 namespace TurboC {
+
+// Encoding utilities for seamless UTF-8 & legacy code page handling
+bool isValidUtf8(const char* data, size_t len);
+std::string convertToUtf8(const char* data, size_t len, unsigned int codePage = 1252);
 
 class TGutterView;
 class TTurboEditWindow;
@@ -50,6 +55,7 @@ public:
     const std::vector<Diagnostic>& getDiagnostics() const { return activeDiagnostics; }
 
     void updateBracketMatching();
+    void ensureUtf8Encoding();
 
 private:
     void drawSyntaxLines(int y, int count, uint linePtr);

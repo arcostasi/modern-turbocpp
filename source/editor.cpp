@@ -5,7 +5,66 @@
 #include <algorithm>
 #include <iostream>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 namespace TurboC {
+
+bool isValidUtf8(const char* data, size_t len) {
+    size_t i = 0;
+    while (i < len) {
+        unsigned char c = static_cast<unsigned char>(data[i]);
+        if (c <= 0x7F) {
+            i++;
+        } else if ((c & 0xE0) == 0xC0) {
+            if (i + 1 >= len) return false;
+            unsigned char c1 = static_cast<unsigned char>(data[i + 1]);
+            if ((c1 & 0xC0) != 0x80) return false;
+            if (c < 0xC2) return false;
+            i += 2;
+        } else if ((c & 0xF0) == 0xE0) {
+            if (i + 2 >= len) return false;
+            unsigned char c1 = static_cast<unsigned char>(data[i + 1]);
+            unsigned char c2 = static_cast<unsigned char>(data[i + 2]);
+            if ((c1 & 0xC0) != 0x80 || (c2 & 0xC0) != 0x80) return false;
+            if (c == 0xE0 && c1 < 0xA0) return false;
+            if (c == 0xED && c1 >= 0xA0) return false;
+            i += 3;
+        } else if ((c & 0xF8) == 0xF0) {
+            if (i + 3 >= len) return false;
+            unsigned char c1 = static_cast<unsigned char>(data[i + 1]);
+            unsigned char c2 = static_cast<unsigned char>(data[i + 2]);
+            unsigned char c3 = static_cast<unsigned char>(data[i + 3]);
+            if ((c1 & 0xC0) != 0x80 || (c2 & 0xC0) != 0x80 || (c3 & 0xC0) != 0x80) return false;
+            if (c == 0xF0 && c1 < 0x90) return false;
+            if (c == 0xF4 && c1 > 0x8F) return false;
+            if (c > 0xF4) return false;
+            i += 4;
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::string convertToUtf8(const char* data, size_t len, unsigned int codePage) {
+    if (len == 0 || data == nullptr) return "";
+#ifdef _WIN32
+    int wlen = MultiByteToWideChar(codePage, 0, data, static_cast<int>(len), nullptr, 0);
+    if (wlen <= 0) return std::string(data, len);
+    std::wstring wstr(wlen, 0);
+    MultiByteToWideChar(codePage, 0, data, static_cast<int>(len), wstr.data(), wlen);
+    int ulen = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), wlen, nullptr, 0, nullptr, nullptr);
+    if (ulen <= 0) return std::string(data, len);
+    std::string ustr(ulen, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.data(), wlen, ustr.data(), ulen, nullptr, nullptr);
+    return ustr;
+#else
+    return std::string(data, len);
+#endif
+}
 
 TTurboEditor::TTurboEditor(const TRect& bounds,
                            TScrollBar* aHScrollBar,
@@ -14,6 +73,25 @@ TTurboEditor::TTurboEditor(const TRect& bounds,
                            TStringView aFileName) noexcept
     : TFileEditor(bounds, aHScrollBar, aVScrollBar, aIndicator, aFileName)
 {
+    ensureUtf8Encoding();
+}
+
+void TTurboEditor::ensureUtf8Encoding() {
+    if (bufLen == 0 || buffer == nullptr) return;
+
+    std::string content;
+    content.resize(bufLen);
+    for (uint i = 0; i < bufLen; ++i) {
+        content[i] = bufChar(i);
+    }
+
+    if (!isValidUtf8(content.data(), content.size())) {
+        std::string utf8Content = convertToUtf8(content.data(), content.size(), 1252);
+        setSelect(0, bufLen, False);
+        deleteSelect();
+        insertBuffer(utf8Content.data(), 0, utf8Content.size(), False, False);
+        modified = False;
+    }
 }
 
 void TTurboEditor::setDiagnostics(const std::vector<Diagnostic>& diags) {
@@ -74,7 +152,7 @@ void TTurboEditor::goToLineAndCol(int line, int col) {
 
     uint lineStartP = p;
     uint lineEndP = lineEnd(p);
-    uint targetP = lineStartP + (col - 1);
+    uint targetP = charPtr(lineStartP, col - 1);
     if (targetP > lineEndP) targetP = lineEndP;
 
     setCurPtr(targetP, 0);
@@ -188,13 +266,14 @@ void TTurboEditor::drawSyntaxLines(int y, int count, uint linePtr) {
 
         std::vector<Token> tokens = hl.tokenizeLine(lineStr, inComment);
 
-        // Render characters into draw buffer
+        // Render characters into draw buffer (UTF-8 multi-byte & accent aware)
         int screenX = 0;
         size_t tokenIdx = 0;
         size_t currentTokenEnd = tokens.empty() ? 0 : (tokens[0].start + tokens[0].length);
 
-        for (size_t charIdx = 0; charIdx < lineStr.length(); ++charIdx) {
-            while (tokenIdx < tokens.size() && charIdx >= currentTokenEnd) {
+        size_t byteIdx = 0;
+        while (byteIdx < lineStr.length()) {
+            while (tokenIdx < tokens.size() && byteIdx >= currentTokenEnd) {
                 tokenIdx++;
                 if (tokenIdx < tokens.size()) {
                     currentTokenEnd = tokens[tokenIdx].start + tokens[tokenIdx].length;
@@ -203,7 +282,7 @@ void TTurboEditor::drawSyntaxLines(int y, int count, uint linePtr) {
 
             TokenType tokType = (tokenIdx < tokens.size()) ? tokens[tokenIdx].type : TokenType::Default;
 
-            uint absPos = linePtr + charIdx;
+            uint absPos = linePtr + byteIdx;
             bool isSel = (selStart <= absPos && absPos < selEnd);
             TColorAttr attr;
             if (absPos == currentBracketPos || absPos == matchingBracketPos) {
@@ -212,7 +291,7 @@ void TTurboEditor::drawSyntaxLines(int y, int count, uint linePtr) {
                 attr = hl.getAttrForToken(tokType, isSel, isErrorLine, isWarningLine);
             }
 
-            char ch = lineStr[charIdx];
+            char ch = lineStr[byteIdx];
             if (ch == '\t') {
                 int tabStop = 4;
                 int spaces = tabStop - (screenX % tabStop);
@@ -223,12 +302,32 @@ void TTurboEditor::drawSyntaxLines(int y, int count, uint linePtr) {
                     }
                     screenX++;
                 }
-            } else {
+                byteIdx++;
+            } else if (static_cast<unsigned char>(ch) < 0x80) {
+                // Single-byte ASCII character
                 int drawCol = screenX - delta.x;
                 if (drawCol >= 0 && drawCol < size.x) {
                     b.moveChar(drawCol, ch, attr, 1);
                 }
                 screenX++;
+                byteIdx++;
+            } else {
+                // Multi-byte UTF-8 character (e.g. Portuguese accents: ç, ã, é, ó, ú, á, ê, etc.)
+                size_t charLen = 0;
+                size_t charWidth = 0;
+                TText::next(TStringView(lineStr.data() + byteIdx, lineStr.length() - byteIdx), charLen, charWidth);
+                if (charLen == 0) {
+                    charLen = 1;
+                    charWidth = 1;
+                }
+
+                int drawCol = screenX - delta.x;
+                if (drawCol >= 0 && drawCol < size.x) {
+                    TStringView charView(lineStr.data() + byteIdx, charLen);
+                    b.moveStr(drawCol, charView, attr, static_cast<ushort>(size.x - drawCol));
+                }
+                screenX += charWidth;
+                byteIdx += charLen;
             }
         }
 

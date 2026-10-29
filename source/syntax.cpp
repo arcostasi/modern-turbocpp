@@ -51,11 +51,11 @@ void SyntaxHighlighter::setThemeByName(std::string_view name) {
     if (name == "ModernDark") currentTheme = ColorTheme::ModernDark;
     else if (name == "RetroGreen") currentTheme = ColorTheme::RetroGreen;
     else if (name == "RetroAmber") currentTheme = ColorTheme::RetroAmber;
-    else if (name == "BorlandPaper" || name == "ClassicPaper") currentTheme = ColorTheme::BorlandPaper;
+    else if (name == "BorlandPaper" || name == "ClassicPaper") currentTheme = ColorTheme::ClassicPaper;
     else if (name == "DarkViolet") currentTheme = ColorTheme::DarkViolet;
     else if (name == "SlateTeal") currentTheme = ColorTheme::SlateTeal;
     else if (name == "ObsidianBlue") currentTheme = ColorTheme::ObsidianBlue;
-    else currentTheme = ColorTheme::BorlandBlue;
+    else currentTheme = ColorTheme::ClassicBlue;
 }
 
 std::string_view SyntaxHighlighter::getThemeName() const {
@@ -63,12 +63,12 @@ std::string_view SyntaxHighlighter::getThemeName() const {
         case ColorTheme::ModernDark: return "ModernDark";
         case ColorTheme::RetroGreen: return "RetroGreen";
         case ColorTheme::RetroAmber: return "RetroAmber";
-        case ColorTheme::BorlandPaper: return "BorlandPaper";
+        case ColorTheme::ClassicPaper: return "ClassicPaper";
         case ColorTheme::DarkViolet: return "DarkViolet";
         case ColorTheme::SlateTeal: return "SlateTeal";
         case ColorTheme::ObsidianBlue: return "ObsidianBlue";
-        case ColorTheme::BorlandBlue:
-        default: return "BorlandBlue";
+        case ColorTheme::ClassicBlue:
+        default: return "ClassicBlue";
     }
 }
 
@@ -213,10 +213,10 @@ std::vector<Token> SyntaxHighlighter::tokenizeLine(std::string_view line, bool& 
             continue;
         }
 
-        // Identifiers / Keywords / Types / Function calls
-        if (std::isalpha(static_cast<unsigned char>(line[i])) || line[i] == '_') {
+        // Identifiers / Keywords / Types / Function calls (supports Unicode/accented identifiers in C23 & C++23)
+        if (std::isalpha(static_cast<unsigned char>(line[i])) || line[i] == '_' || static_cast<unsigned char>(line[i]) >= 0x80) {
             size_t start = i;
-            while (i < len && (std::isalnum(static_cast<unsigned char>(line[i])) || line[i] == '_')) {
+            while (i < len && (std::isalnum(static_cast<unsigned char>(line[i])) || line[i] == '_' || static_cast<unsigned char>(line[i]) >= 0x80)) {
                 i++;
             }
             std::string_view word = line.substr(start, i - start);
