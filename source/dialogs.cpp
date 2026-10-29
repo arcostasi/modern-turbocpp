@@ -96,11 +96,11 @@ static const char* getCompileModeTitle(CompileMode mode) {
     return "Compiling";
 }
 
-static const char* getCompileModeRunningString(CompileMode mode) {
+static const char* getCompileModeRunningString(CompileMode mode, bool isC = false) {
     switch (mode) {
-        case CompileMode::BuildExe: return "Compiling & linking executable...";
-        case CompileMode::CompileObj: return "Compiling source to OBJ...";
-        case CompileMode::SyntaxCheck: return "Checking C++23 syntax...";
+        case CompileMode::BuildExe: return isC ? "Compiling C executable..." : "Compiling & linking executable...";
+        case CompileMode::CompileObj: return isC ? "Compiling C source to OBJ..." : "Compiling source to OBJ...";
+        case CompileMode::SyntaxCheck: return isC ? "Checking C23 syntax..." : "Checking C++23 syntax...";
         case CompileMode::GenerateAssembly: return "Generating Intel assembly...";
     }
     return "Compiling...";
@@ -121,8 +121,11 @@ TCompileDialog::TCompileDialog(const std::string& sourceFile,
 
     std::filesystem::path src(sourceFile);
     std::filesystem::path tgt(targetPath);
+    std::string ext = src.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    bool isC = (ext == ".c");
 
-    statusLabel = new TDynamicText(TRect(4, 2, 58, 3), std::format("Status:    {} [|]", getCompileModeRunningString(mode)), 0x1E);
+    statusLabel = new TDynamicText(TRect(4, 2, 58, 3), std::format("Status:    {} [|]", getCompileModeRunningString(mode, isC)), 0x1E);
     insert(statusLabel);
 
     mainFileLabel = new TDynamicText(TRect(4, 4, 58, 5), std::format("Main file: {:<32}", src.filename().string()));
@@ -210,8 +213,13 @@ void TCompileDialog::updateUI() {
         int to = process->getTimeoutSeconds();
         double rem = (to > 0) ? std::max(0.0, to - el) : 0.0;
 
+        std::filesystem::path src(sourcePath);
+        std::string ext = src.extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        bool isC = (ext == ".c");
+
         elapsedLabel->setText(std::format("Elapsed:   {:.1f}s  (Timeout: {}s, Rem: {:.1f}s)", el, to, rem));
-        statusLabel->setText(std::format("Status:    {} [{}]", getCompileModeRunningString(compileMode), spinChars[spinnerIndex]));
+        statusLabel->setText(std::format("Status:    {} [{}]", getCompileModeRunningString(compileMode, isC), spinChars[spinnerIndex]));
 
         std::string latest = process->getLatestLine();
         if (!latest.empty()) {
@@ -295,16 +303,16 @@ void TCompileDialog::finishProcess() {
     if (result.errorCount > 0 || result.warningCount > 0) {
         viewMsgsBtn->show();
         okBtn->show();
-        TRect rOk(32, 13, 46, 15);
-        okBtn->locate(rOk);
-        okBtn->makeDefault(False);
-        TRect rView(12, 13, 30, 15);
+        TRect rView(14, 13, 32, 15);
         viewMsgsBtn->locate(rView);
         viewMsgsBtn->makeDefault(True);
         viewMsgsBtn->select();
+        TRect rOk(34, 13, 48, 15);
+        okBtn->locate(rOk);
+        okBtn->makeDefault(False);
     } else {
         okBtn->show();
-        TRect rOk(22, 13, 38, 15);
+        TRect rOk(23, 13, 39, 15);
         okBtn->locate(rOk);
         okBtn->makeDefault(True);
         okBtn->select();
@@ -608,7 +616,7 @@ void TFormatDialog::updateUI() {
 // ============================================================================
 
 TOptionsDialog::TOptionsDialog(CompilerConfig& config) noexcept
-    : TDialog(TRect(0, 0, 68, 20), "Compiler & LLVM Settings"),
+    : TDialog(TRect(0, 0, 68, 17), "Compiler & LLVM Settings"),
       TWindowInit(&TOptionsDialog::initFrame)
 {
     options |= ofCentered;
@@ -620,16 +628,22 @@ TOptionsDialog::TOptionsDialog(CompilerConfig& config) noexcept
     insert(new TLabel(TRect(3, 2, 19, 3), "~L~LVM Bin Path:", llvmPathInput));
 
     // C++ Standard
-    standardInput = new TInputLine(TRect(20, 4, 40, 5), 32);
+    standardInput = new TInputLine(TRect(15, 4, 28, 5), 16);
     standardInput->setData(const_cast<char*>(config.cppStandard.c_str()));
     insert(standardInput);
-    insert(new TLabel(TRect(3, 4, 19, 5), "~S~tandard:", standardInput));
+    insert(new TLabel(TRect(3, 4, 14, 5), "C++ ~S~td:", standardInput));
+
+    // C Standard
+    cStandardInput = new TInputLine(TRect(39, 4, 50, 5), 16);
+    cStandardInput->setData(const_cast<char*>(config.cStandard.c_str()));
+    insert(cStandardInput);
+    insert(new TLabel(TRect(30, 4, 38, 5), "~C~ Std:", cStandardInput));
 
     // Optimization
-    optInput = new TInputLine(TRect(50, 4, 64, 5), 16);
+    optInput = new TInputLine(TRect(58, 4, 64, 5), 8);
     optInput->setData(const_cast<char*>(config.optLevel.c_str()));
     insert(optInput);
-    insert(new TLabel(TRect(44, 4, 49, 5), "~O~pt:", optInput));
+    insert(new TLabel(TRect(52, 4, 57, 5), "~O~pt:", optInput));
 
     // Warnings
     warningsInput = new TInputLine(TRect(20, 6, 64, 7), 64);
@@ -656,9 +670,9 @@ TOptionsDialog::TOptionsDialog(CompilerConfig& config) noexcept
     insert(timeoutInput);
     insert(new TLabel(TRect(3, 12, 19, 13), "~T~imeout (sec):", timeoutInput));
 
-    // Buttons
-    insert(new TButton(TRect(20, 16, 34, 18), "O~K~", cmOK, bfDefault));
-    insert(new TButton(TRect(36, 16, 50, 18), "Cancel", cmCancel, bfNormal));
+    // Buttons (symmetrically centered: margins 19 left, 19 right)
+    insert(new TButton(TRect(19, 14, 33, 16), "O~K~", cmOK, bfDefault));
+    insert(new TButton(TRect(35, 14, 49, 16), "Cancel", cmCancel, bfNormal));
 
     selectNext(False);
 }
@@ -673,6 +687,10 @@ bool TOptionsDialog::getUpdatedConfig(CompilerConfig& config) {
     if (standardInput) {
         standardInput->getData(buf);
         config.cppStandard = buf;
+    }
+    if (cStandardInput) {
+        cStandardInput->getData(buf);
+        config.cStandard = buf;
     }
     if (optInput) {
         optInput->getData(buf);
@@ -703,19 +721,20 @@ bool TOptionsDialog::getUpdatedConfig(CompilerConfig& config) {
 // ============================================================================
 
 TGoToLineDialog::TGoToLineDialog(int currentLine) noexcept
-    : TDialog(TRect(0, 0, 36, 10), "Go to Line"),
+    : TDialog(TRect(0, 0, 36, 9), "Go to Line"),
       TWindowInit(&TGoToLineDialog::initFrame)
 {
     options |= ofCentered;
 
-    lineInput = new TInputLine(TRect(18, 3, 30, 4), 10);
+    lineInput = new TInputLine(TRect(18, 2, 30, 3), 10);
     std::string curStr = std::to_string(currentLine);
     lineInput->setData(const_cast<char*>(curStr.c_str()));
     insert(lineInput);
-    insert(new TLabel(TRect(4, 3, 17, 4), "~L~ine number:", lineInput));
+    insert(new TLabel(TRect(4, 2, 17, 3), "~L~ine number:", lineInput));
 
-    insert(new TButton(TRect(6, 6, 18, 8), "O~K~", cmOK, bfDefault));
-    insert(new TButton(TRect(20, 6, 32, 8), "Cancel", cmCancel, bfNormal));
+    // Buttons (symmetrically centered: margins 5 left, 5 right)
+    insert(new TButton(TRect(5, 5, 17, 7), "O~K~", cmOK, bfDefault));
+    insert(new TButton(TRect(19, 5, 31, 7), "Cancel", cmCancel, bfNormal));
 
     selectNext(False);
 }
@@ -736,7 +755,7 @@ int TGoToLineDialog::getLineNumber() const {
 // ============================================================================
 
 TAboutDialog::TAboutDialog() noexcept
-    : TDialog(TRect(0, 0, 62, 17), "About Modern Turbo C++"),
+    : TDialog(TRect(0, 0, 62, 16), "About Modern Turbo C++"),
       TWindowInit(&TAboutDialog::initFrame)
 {
     options |= ofCentered;
@@ -757,6 +776,7 @@ TAboutDialog::TAboutDialog() noexcept
     insert(new TStaticText(TRect(6, 9, 56, 10), line6));
     insert(new TStaticText(TRect(6, 11, 56, 12), line7));
 
+    // Centered button: margin 23 left, 23 right
     insert(new TButton(TRect(23, 13, 39, 15), "O~K~", cmOK, bfDefault));
 }
 
@@ -765,7 +785,7 @@ TAboutDialog::TAboutDialog() noexcept
 // ============================================================================
 
 TProgramArgsDialog::TProgramArgsDialog(const std::string& currentArgs) noexcept
-    : TDialog(TRect(0, 0, 56, 11), "Program Arguments"),
+    : TDialog(TRect(0, 0, 56, 10), "Program Arguments"),
       TWindowInit(&TProgramArgsDialog::initFrame)
 {
     options |= ofCentered;
@@ -775,8 +795,9 @@ TProgramArgsDialog::TProgramArgsDialog(const std::string& currentArgs) noexcept
     insert(argsInput);
     insert(new TLabel(TRect(3, 2, 35, 3), "Command-line ~A~rguments:", argsInput));
 
-    insert(new TButton(TRect(14, 6, 26, 8), "O~K~", cmOK, bfDefault));
-    insert(new TButton(TRect(28, 6, 40, 8), "Cancel", cmCancel, bfNormal));
+    // Buttons (symmetrically centered: margins 15 left, 15 right)
+    insert(new TButton(TRect(15, 6, 27, 8), "O~K~", cmOK, bfDefault));
+    insert(new TButton(TRect(29, 6, 41, 8), "Cancel", cmCancel, bfNormal));
 
     selectNext(False);
 }
@@ -793,7 +814,7 @@ std::string TProgramArgsDialog::getArguments() const {
 // ============================================================================
 
 TEditorOptionsDialog::TEditorOptionsDialog(EditorConfig& config) noexcept
-    : TDialog(TRect(0, 0, 56, 19), "Editor Settings"),
+    : TDialog(TRect(0, 0, 56, 17), "Editor Settings"),
       TWindowInit(&TEditorOptionsDialog::initFrame),
       activeConfig(config)
 {
@@ -805,7 +826,8 @@ TEditorOptionsDialog::TEditorOptionsDialog(EditorConfig& config) noexcept
     insert(tabSizeInput);
     insert(new TLabel(TRect(3, 2, 15, 3), "~T~ab Size:", tabSizeInput));
 
-    checkBoxes = new TCheckBoxes(TRect(3, 4, 52, 10),
+    // 5 checkbox items end neatly at row 9
+    checkBoxes = new TCheckBoxes(TRect(3, 4, 52, 9),
         new TSItem("~A~uto indent mode",
         new TSItem("~S~yntax highlighting (C++23)",
         new TSItem("~L~ine numbers gutter",
@@ -822,12 +844,17 @@ TEditorOptionsDialog::TEditorOptionsDialog(EditorConfig& config) noexcept
     checkBoxes->setData(&flags);
     insert(checkBoxes);
 
-    themeLabel = new TDynamicText(TRect(3, 11, 32, 12), std::format("Theme: {:<16}", config.colorTheme), 0x1E);
+    std::string dispTheme = (config.colorTheme == "BorlandBlue" || config.colorTheme == "ClassicBlue") ? "ClassicBlue" :
+                            (config.colorTheme == "BorlandPaper" || config.colorTheme == "ClassicPaper") ? "ClassicPaper" : config.colorTheme;
+    themeLabel = new TDynamicText(TRect(3, 11, 31, 12), std::format("Theme: {:<16}", dispTheme), 0x1E);
     insert(themeLabel);
-    insert(new TButton(TRect(34, 10, 52, 12), "Color ~T~hemes...", cmColorThemes, bfNormal));
 
-    insert(new TButton(TRect(14, 15, 26, 17), "O~K~", cmOK, bfDefault));
-    insert(new TButton(TRect(28, 15, 40, 17), "Cancel", cmCancel, bfNormal));
+    // Color Themes button descends 1 row to line 11 (y: 11..13), perfectly aligned with themeLabel
+    insert(new TButton(TRect(32, 11, 52, 13), "Color ~T~hemes...", cmColorThemes, bfNormal));
+
+    // Buttons (symmetrically centered: margins 14 left, 14 right)
+    insert(new TButton(TRect(14, 14, 26, 16), "O~K~", cmOK, bfDefault));
+    insert(new TButton(TRect(30, 14, 42, 16), "Cancel", cmCancel, bfNormal));
 
     selectNext(False);
 }
@@ -838,7 +865,7 @@ void TEditorOptionsDialog::handleEvent(TEvent& event) {
         if (activeConfig.colorTheme == "ModernDark") currentIdx = 1;
         else if (activeConfig.colorTheme == "RetroGreen") currentIdx = 2;
         else if (activeConfig.colorTheme == "RetroAmber") currentIdx = 3;
-        else if (activeConfig.colorTheme == "BorlandPaper") currentIdx = 4;
+        else if (activeConfig.colorTheme == "BorlandPaper" || activeConfig.colorTheme == "ClassicPaper") currentIdx = 4;
         else if (activeConfig.colorTheme == "DarkViolet") currentIdx = 5;
         else if (activeConfig.colorTheme == "SlateTeal") currentIdx = 6;
         else if (activeConfig.colorTheme == "ObsidianBlue") currentIdx = 7;
@@ -851,12 +878,12 @@ void TEditorOptionsDialog::handleEvent(TEvent& event) {
                 case 1: activeConfig.colorTheme = "ModernDark"; break;
                 case 2: activeConfig.colorTheme = "RetroGreen"; break;
                 case 3: activeConfig.colorTheme = "RetroAmber"; break;
-                case 4: activeConfig.colorTheme = "BorlandPaper"; break;
+                case 4: activeConfig.colorTheme = "ClassicPaper"; break;
                 case 5: activeConfig.colorTheme = "DarkViolet"; break;
                 case 6: activeConfig.colorTheme = "SlateTeal"; break;
                 case 7: activeConfig.colorTheme = "ObsidianBlue"; break;
                 case 0:
-                default: activeConfig.colorTheme = "BorlandBlue"; break;
+                default: activeConfig.colorTheme = "ClassicBlue"; break;
             }
             if (themeLabel) {
                 themeLabel->setText(std::format("Theme: {:<16}", activeConfig.colorTheme));
@@ -901,7 +928,7 @@ bool TEditorOptionsDialog::getUpdatedConfig(EditorConfig& config) {
 // ============================================================================
 
 TDirectoriesDialog::TDirectoriesDialog(CompilerConfig& config) noexcept
-    : TDialog(TRect(0, 0, 64, 16), "Directories"),
+    : TDialog(TRect(0, 0, 64, 14), "Directories"),
       TWindowInit(&TDirectoriesDialog::initFrame)
 {
     options |= ofCentered;
@@ -921,8 +948,9 @@ TDirectoriesDialog::TDirectoriesDialog(CompilerConfig& config) noexcept
     insert(outDirInput);
     insert(new TLabel(TRect(3, 8, 17, 9), "~O~utput Dir:", outDirInput));
 
-    insert(new TButton(TRect(18, 12, 30, 14), "O~K~", cmOK, bfDefault));
-    insert(new TButton(TRect(32, 12, 44, 14), "Cancel", cmCancel, bfNormal));
+    // Buttons (symmetrically centered: margins 19 left, 19 right)
+    insert(new TButton(TRect(19, 11, 31, 13), "O~K~", cmOK, bfDefault));
+    insert(new TButton(TRect(33, 11, 45, 13), "Cancel", cmCancel, bfNormal));
 
     selectNext(False);
 }
@@ -1036,7 +1064,7 @@ TClangHelpDialog::TClangHelpDialog() noexcept
 // ============================================================================
 
 TWindowListDialog::TWindowListDialog(const std::vector<std::string>& windowNames, int currentIdx) noexcept
-    : TDialog(TRect(0, 0, 54, 16), "Window List"),
+    : TDialog(TRect(0, 0, 54, 14), "Window List"),
       TWindowInit(&TWindowListDialog::initFrame)
 {
     options |= ofCentered;
@@ -1057,8 +1085,9 @@ TWindowListDialog::TWindowListDialog(const std::vector<std::string>& windowNames
         insert(new TStaticText(TRect(4, 3, 48, 4), "No open windows."));
     }
 
-    insert(new TButton(TRect(12, 11, 24, 13), "~S~witch", cmOK, bfDefault));
-    insert(new TButton(TRect(26, 11, 38, 13), "Cancel", cmCancel, bfNormal));
+    // Buttons (symmetrically centered: margins 14 left, 14 right)
+    insert(new TButton(TRect(14, 11, 26, 13), "~S~witch", cmOK, bfDefault));
+    insert(new TButton(TRect(28, 11, 40, 13), "Cancel", cmCancel, bfNormal));
 
     selectNext(False);
 }
@@ -1075,11 +1104,11 @@ int TWindowListDialog::getSelectedIndex() const {
 // ============================================================================
 
 TThemeDialog::TThemeDialog(int currentThemeIdx) noexcept
-    : TDialog(TRect(0, 0, 52, 18), "Color Themes"),
+    : TDialog(TRect(0, 0, 52, 14), "Color Themes"),
       TWindowInit(&TThemeDialog::initFrame)
 {
     options |= ofCentered;
-    radioButtons = new TRadioButtons(TRect(4, 2, 48, 11),
+    radioButtons = new TRadioButtons(TRect(4, 2, 48, 10),
         new TSItem("~C~lassic Blue (Default)",
         new TSItem("~M~odern Dark / Monokai",
         new TSItem("Retro ~G~reen CRT",
@@ -1093,8 +1122,9 @@ TThemeDialog::TThemeDialog(int currentThemeIdx) noexcept
     radioButtons->setData(&sel);
     insert(radioButtons);
 
-    insert(new TButton(TRect(12, 13, 24, 15), "O~K~", cmOK, bfDefault));
-    insert(new TButton(TRect(28, 13, 40, 15), "Cancel", cmCancel, bfNormal));
+    // Buttons (symmetrically centered: margins 12 left, 12 right)
+    insert(new TButton(TRect(12, 11, 24, 13), "O~K~", cmOK, bfDefault));
+    insert(new TButton(TRect(28, 11, 40, 13), "Cancel", cmCancel, bfNormal));
     selectNext(False);
 }
 
@@ -1110,11 +1140,11 @@ int TThemeDialog::getSelectedThemeIndex() const {
 // ============================================================================
 
 TSnippetsDialog::TSnippetsDialog() noexcept
-    : TDialog(TRect(0, 0, 56, 16), "Insert C++23 Code Snippet"),
+    : TDialog(TRect(0, 0, 56, 13), "Insert C++23 Code Snippet"),
       TWindowInit(&TSnippetsDialog::initFrame)
 {
     options |= ofCentered;
-    radioButtons = new TRadioButtons(TRect(4, 2, 52, 9),
+    radioButtons = new TRadioButtons(TRect(4, 2, 52, 8),
         new TSItem("C++23 ~H~ello World (std::print)",
         new TSItem("~R~anges & Views Pipeline",
         new TSItem("Modern ~C~lass (Rule of 5)",
@@ -1126,8 +1156,9 @@ TSnippetsDialog::TSnippetsDialog() noexcept
     radioButtons->setData(&sel);
     insert(radioButtons);
 
-    insert(new TButton(TRect(14, 11, 26, 13), "~I~nsert", cmOK, bfDefault));
-    insert(new TButton(TRect(30, 11, 42, 13), "Cancel", cmCancel, bfNormal));
+    // Buttons (symmetrically centered: margins 14 left, 14 right)
+    insert(new TButton(TRect(14, 10, 26, 12), "~I~nsert", cmOK, bfDefault));
+    insert(new TButton(TRect(30, 10, 42, 12), "Cancel", cmCancel, bfNormal));
     selectNext(False);
 }
 
@@ -1209,7 +1240,7 @@ std::string TSnippetsDialog::getSelectedSnippetText() const {
 // ============================================================================
 
 TFileStatsDialog::TFileStatsDialog(const std::string& fileName, const FileStats& stats) noexcept
-    : TDialog(TRect(0, 0, 58, 17), "File Statistics"),
+    : TDialog(TRect(0, 0, 58, 14), "File Statistics"),
       TWindowInit(&TFileStatsDialog::initFrame)
 {
     options |= ofCentered;
@@ -1233,7 +1264,8 @@ TFileStatsDialog::TFileStatsDialog(const std::string& fileName, const FileStats&
     insert(new TStaticText(TRect(4, 8, 30, 9), std::format("File Size (bytes): {:>8}", stats.fileSize).c_str()));
     insert(new TStaticText(TRect(30, 8, 54, 9), std::format("Functions:     {:>8}", stats.functionCount).c_str()));
 
-    insert(new TButton(TRect(22, 12, 36, 14), "O~K~", cmOK, bfDefault));
+    // Buttons (symmetrically centered: margins 22 left, 22 right)
+    insert(new TButton(TRect(22, 11, 36, 13), "O~K~", cmOK, bfDefault));
 }
 
 // ============================================================================

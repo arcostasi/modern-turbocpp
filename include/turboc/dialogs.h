@@ -173,6 +173,7 @@ public:
 private:
     TInputLine* llvmPathInput = nullptr;
     TInputLine* standardInput = nullptr;
+    TInputLine* cStandardInput = nullptr;
     TInputLine* optInput = nullptr;
     TInputLine* warningsInput = nullptr;
     TInputLine* extraFlagsInput = nullptr;
