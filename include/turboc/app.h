@@ -18,6 +18,7 @@
 #define Uses_TKeys
 #define Uses_TEvent
 #define Uses_MsgBox
+#define Uses_TPalette
 #include <tvision/tv.h>
 
 namespace TurboC {
@@ -33,6 +34,7 @@ public:
 
     virtual void handleEvent(TEvent& event) override;
     virtual void idle() override;
+    virtual TPalette& getPalette() const override;
 
     TTurboEditWindow* openEditor(const char* fileName, Boolean visible);
     TTurboEditWindow* getActiveEditor();

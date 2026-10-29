@@ -1,5 +1,6 @@
 #include "turboc/msgwindow.h"
 #include "turboc/commands.h"
+#include "turboc/syntax.h"
 #include <format>
 #include <cstring>
 #include <algorithm>
@@ -44,9 +45,13 @@ void TMessageListViewer::getText(char* dest, short item, short maxLen) {
 
 void TMessageListViewer::draw() {
     TDrawBuffer b;
+    auto& hl = SyntaxHighlighter::instance();
+    TColorAttr bgAttr = hl.getBackgroundAttr();
+    auto theme = hl.getTheme();
+
     for (short i = 0; i < size.y; ++i) {
         short item = topItem + i;
-        b.moveChar(0, ' ', TColorAttr(0x17), size.x);
+        b.moveChar(0, ' ', bgAttr, size.x);
 
         if (item < range && item < static_cast<short>(diagnostics.size())) {
             const auto& diag = diagnostics[item];
@@ -56,24 +61,32 @@ void TMessageListViewer::draw() {
             TColorAttr attr;
 
             if (isFocused) {
-                attr = TColorAttr(0x70); // Inverse selection
+                attr = hl.getAttrForToken(TokenType::Default, true, false, false);
             } else {
                 switch (diag.severity) {
                     case DiagnosticSeverity::Error:
-                        attr = TColorAttr(0x1C); // Bright Red on Blue
+                        if (theme == ColorTheme::ClassicBlue) attr = TColorAttr(0x1C); // Bright Red on Blue
+                        else if (theme == ColorTheme::ClassicPaper) attr = TColorAttr(0x74); // Red on Paper
+                        else attr = TColorAttr(0x0C); // Bright Red on Dark
                         break;
                     case DiagnosticSeverity::Warning:
-                        attr = TColorAttr(0x1E); // Yellow on Blue
+                        if (theme == ColorTheme::ClassicBlue) attr = TColorAttr(0x1E); // Yellow on Blue
+                        else if (theme == ColorTheme::ClassicPaper) attr = TColorAttr(0x76); // Amber on Paper
+                        else attr = TColorAttr(0x0E); // Yellow on Dark
                         break;
                     case DiagnosticSeverity::Note:
-                        attr = TColorAttr(0x1B); // Light Cyan on Blue
+                        if (theme == ColorTheme::ClassicBlue) attr = TColorAttr(0x1B); // Cyan on Blue
+                        else if (theme == ColorTheme::ClassicPaper) attr = TColorAttr(0x71); // Blue on Paper
+                        else attr = TColorAttr(0x0B); // Cyan on Dark
                         break;
                 }
             }
 
             b.moveStr(0, text, attr, size.x);
         } else if (diagnostics.empty() && i == 0) {
-            b.moveStr(2, "No compile or syntax messages.", TColorAttr(0x13), size.x);
+            TColorAttr emptyAttr = (theme == ColorTheme::ClassicBlue) ? TColorAttr(0x13) :
+                                   (theme == ColorTheme::ClassicPaper) ? TColorAttr(0x78) : TColorAttr(0x08);
+            b.moveStr(2, "No compile or syntax messages.", emptyAttr, size.x);
         }
 
         writeBuf(0, i, size.x, 1, b);

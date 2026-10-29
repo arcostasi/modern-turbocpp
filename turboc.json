@@ -5,6 +5,7 @@
     "cCompiler": "clang.exe",
     "clangFormat": "clang-format.exe",
     "cppStandard": "c++23",
+    "cStandard": "c23",
     "optLevel": "-O2",
     "warningFlags": "-Wall -Wextra",
     "extraFlags": "-D_CRT_SECURE_NO_WARNINGS",
@@ -22,6 +23,6 @@
     "useTabs": false,
     "autoSyntaxCheckOnSave": true,
     "autoCloseDelimiters": true,
-    "colorTheme": "BorlandBlue"
+    "colorTheme": "ClassicBlue"
   }
 }

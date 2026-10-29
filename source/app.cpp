@@ -32,7 +32,7 @@ static ushort execDialog(TDialog* d, void* data) {
 }
 
 static TDialog* createFindDialog() {
-    TDialog* d = new TDialog(TRect(0, 0, 42, 12), "Find");
+    TDialog* d = new TDialog(TRect(0, 0, 42, 11), "Find");
     d->options |= ofCentered;
 
     TInputLine* control = new TInputLine(TRect(3, 3, 35, 4), 80);
@@ -44,8 +44,9 @@ static TDialog* createFindDialog() {
         new TSItem("~C~ase sensitive",
         new TSItem("~W~hole words only", nullptr))));
 
-    d->insert(new TButton(TRect(16, 9, 26, 11), "O~K~", cmOK, bfDefault));
-    d->insert(new TButton(TRect(28, 9, 38, 11), "Cancel", cmCancel, bfNormal));
+    // Buttons (symmetrically centered: margins 10 left, 10 right)
+    d->insert(new TButton(TRect(10, 8, 20, 10), "O~K~", cmOK, bfDefault));
+    d->insert(new TButton(TRect(22, 8, 32, 10), "Cancel", cmCancel, bfNormal));
 
     d->selectNext(False);
     return d;
@@ -71,8 +72,9 @@ static TDialog* createReplaceDialog() {
         new TSItem("~P~rompt on replace",
         new TSItem("~R~eplace all", nullptr))))));
 
-    d->insert(new TButton(TRect(18, 13, 28, 15), "O~K~", cmOK, bfDefault));
-    d->insert(new TButton(TRect(30, 13, 40, 15), "Cancel", cmCancel, bfNormal));
+    // Buttons (symmetrically centered: margins 11 left, 11 right)
+    d->insert(new TButton(TRect(11, 13, 21, 15), "O~K~", cmOK, bfDefault));
+    d->insert(new TButton(TRect(23, 13, 33, 15), "Cancel", cmCancel, bfNormal));
 
     d->selectNext(False);
     return d;
@@ -351,6 +353,211 @@ TStatusLine* TTurboCApp::initStatusLine(TRect r) {
             *new TStatusItem(nullptr, kbAltF8, cmNextError) +
             *new TStatusItem(nullptr, kbAltG, cmGoToLine)
     );
+}
+
+static TPalette& getThemePalette(std::string_view themeName) {
+    static const char basePalette[136] = cpAppColor;
+
+    auto makePalette = [](auto customize) -> TPalette {
+        char pal[135];
+        std::memcpy(pal, basePalette, 135);
+        customize(reinterpret_cast<unsigned char*>(pal));
+        return TPalette(pal, 135);
+    };
+
+    static TPalette palClassicBlue = makePalette([](unsigned char*) {});
+
+    static TPalette palModernDark = makePalette([](unsigned char* p) {
+        p[0] = 0x08; // Desktop: Dark gray dot pattern on black
+        // Menu & Status Line
+        p[1] = 0x07; // Normal: Light Gray on Black
+        p[2] = 0x08; // Disabled: Dark Gray on Black
+        p[3] = 0x0E; // Shortcut: Bright Yellow/Gold on Black
+        p[4] = 0x1F; // Selected: Bright White on Cobalt Blue
+        p[5] = 0x18; // Sel Disabled: Dark Gray on Blue
+        p[6] = 0x1E; // Sel Shortcut: Bright Yellow on Blue
+        // Windows (Blue 7..14, Cyan 15..22, Gray 23..30)
+        for (int base : {7, 15, 23}) {
+            p[base + 0] = 0x08; // Inactive frame
+            p[base + 1] = 0x0F; // Active frame (Crisp Bright White)
+            p[base + 2] = 0x0E; // Active title (Gold)
+            p[base + 3] = 0x08; // Scrollbar page
+            p[base + 4] = 0x07; // Scrollbar arrow
+            p[base + 5] = 0x0B; // Icons (Cyan)
+            p[base + 6] = 0x07; // Resize
+            p[base + 7] = 0x0F; // Title normal
+        }
+        // Dialogs (31..62)
+        p[31] = 0x08; // Dialog frame inactive
+        p[32] = 0x0F; // Dialog frame active
+        p[33] = 0x0E; // Dialog title
+        p[40] = 0x1F; // Button normal
+        p[41] = 0x2F; // Button default (White on green)
+        p[42] = 0x3F; // Button selected
+    });
+
+    static TPalette palRetroGreen = makePalette([](unsigned char* p) {
+        p[0] = 0x02; // Desktop: Dim green on black
+        p[1] = 0x0A; // Menu normal: Bright Green on Black
+        p[2] = 0x02; // Menu disabled
+        p[3] = 0x0F; // Menu shortcut: White on Black
+        p[4] = 0x20; // Menu selected: Black on Green
+        p[5] = 0x28; // Menu sel disabled
+        p[6] = 0x2F; // Menu sel shortcut
+        for (int base : {7, 15, 23}) {
+            p[base + 0] = 0x02; // Inactive frame
+            p[base + 1] = 0x0A; // Active frame (Bright Phosphor Green)
+            p[base + 2] = 0x0F; // Active title (White)
+            p[base + 3] = 0x02;
+            p[base + 4] = 0x0A;
+            p[base + 5] = 0x0A;
+            p[base + 6] = 0x02;
+            p[base + 7] = 0x0A;
+        }
+        p[31] = 0x02;
+        p[32] = 0x0A;
+        p[33] = 0x0F;
+        p[40] = 0x20;
+        p[41] = 0x2A;
+        p[42] = 0x2F;
+    });
+
+    static TPalette palRetroAmber = makePalette([](unsigned char* p) {
+        p[0] = 0x06; // Desktop: Dim amber on black
+        p[1] = 0x0E; // Menu normal: Bright Amber on Black
+        p[2] = 0x06; // Menu disabled
+        p[3] = 0x0F; // Menu shortcut: White on Black
+        p[4] = 0x60; // Menu selected: Black on Amber
+        p[5] = 0x68; // Menu sel disabled
+        p[6] = 0x6F; // Menu sel shortcut
+        for (int base : {7, 15, 23}) {
+            p[base + 0] = 0x06; // Inactive frame
+            p[base + 1] = 0x0E; // Active frame (Bright Amber)
+            p[base + 2] = 0x0F; // Active title (White)
+            p[base + 3] = 0x06;
+            p[base + 4] = 0x0E;
+            p[base + 5] = 0x0E;
+            p[base + 6] = 0x06;
+            p[base + 7] = 0x0E;
+        }
+        p[31] = 0x06;
+        p[32] = 0x0E;
+        p[33] = 0x0F;
+        p[40] = 0x60;
+        p[41] = 0x6E;
+        p[42] = 0x6F;
+    });
+
+    static TPalette palClassicPaper = makePalette([](unsigned char* p) {
+        p[0] = 0x78; // Desktop
+        p[1] = 0x70; // Menu normal: Black on Light Gray
+        p[2] = 0x78; // Menu disabled
+        p[3] = 0x74; // Menu shortcut: Red on Light Gray
+        p[4] = 0x1F; // Menu selected: White on Blue
+        p[5] = 0x18;
+        p[6] = 0x1E;
+        for (int base : {7, 15, 23}) {
+            p[base + 0] = 0x78; // Inactive frame
+            p[base + 1] = 0x70; // Active frame (Solid Black on Paper)
+            p[base + 2] = 0x71; // Active title (Deep Blue)
+            p[base + 3] = 0x78;
+            p[base + 4] = 0x70;
+            p[base + 5] = 0x74;
+            p[base + 6] = 0x78;
+            p[base + 7] = 0x70;
+        }
+    });
+
+    static TPalette palDarkViolet = makePalette([](unsigned char* p) {
+        p[0] = 0x05; // Desktop: Dim purple/magenta on black
+        p[1] = 0x5F; // Menu normal: Bright White on Purple/Magenta (Image 1)
+        p[2] = 0x57; // Menu disabled: Silver on Purple
+        p[3] = 0x5E; // Menu shortcut: Gold on Purple
+        p[4] = 0x70; // Menu selected: Black on Silver
+        p[5] = 0x78;
+        p[6] = 0x74;
+        for (int base : {7, 15, 23}) {
+            p[base + 0] = 0x05; // Inactive frame (Dim Magenta)
+            p[base + 1] = 0x0D; // Active frame (Bright Violet / Magenta)
+            p[base + 2] = 0x0E; // Active title (Gold)
+            p[base + 3] = 0x05;
+            p[base + 4] = 0x0D;
+            p[base + 5] = 0x0B; // Icons (Cyan)
+            p[base + 6] = 0x05;
+            p[base + 7] = 0x0F;
+        }
+        p[31] = 0x05;
+        p[32] = 0x0D;
+        p[33] = 0x0E;
+        p[40] = 0x5F;
+        p[41] = 0x5E;
+        p[42] = 0x70;
+    });
+
+    static TPalette palSlateTeal = makePalette([](unsigned char* p) {
+        p[0] = 0x03; // Desktop: Dim cyan on black
+        p[1] = 0x30; // Menu normal: Dark on Cyan/Teal (Image 2)
+        p[2] = 0x38; // Menu disabled
+        p[3] = 0x34; // Menu shortcut: Red on Cyan
+        p[4] = 0x1F; // Menu selected: White on Blue
+        p[5] = 0x18;
+        p[6] = 0x1E;
+        for (int base : {7, 15, 23}) {
+            p[base + 0] = 0x03; // Inactive frame (Dim Cyan)
+            p[base + 1] = 0x0B; // Active frame (Bright Cyan / Teal)
+            p[base + 2] = 0x0F; // Active title (Crisp White)
+            p[base + 3] = 0x03;
+            p[base + 4] = 0x0B;
+            p[base + 5] = 0x0E; // Icons (Amber)
+            p[base + 6] = 0x03;
+            p[base + 7] = 0x0F;
+        }
+        p[31] = 0x03;
+        p[32] = 0x0B;
+        p[33] = 0x0F;
+        p[40] = 0x30;
+        p[41] = 0x3F;
+        p[42] = 0x1F;
+    });
+
+    static TPalette palObsidianBlue = makePalette([](unsigned char* p) {
+        p[0] = 0x01; // Desktop: Dim cobalt blue on black
+        p[1] = 0x1F; // Menu normal: Bright White on Cobalt Blue (Image 3)
+        p[2] = 0x17; // Menu disabled
+        p[3] = 0x1E; // Menu shortcut: Gold on Blue
+        p[4] = 0x60; // Menu selected: Black on Amber/Gold
+        p[5] = 0x68;
+        p[6] = 0x6F;
+        for (int base : {7, 15, 23}) {
+            p[base + 0] = 0x01; // Inactive frame (Dim Blue)
+            p[base + 1] = 0x09; // Active frame (Bright Cobalt Blue)
+            p[base + 2] = 0x0E; // Active title (Gold)
+            p[base + 3] = 0x01;
+            p[base + 4] = 0x09;
+            p[base + 5] = 0x0E; // Icons (Gold)
+            p[base + 6] = 0x01;
+            p[base + 7] = 0x0F;
+        }
+        p[31] = 0x01;
+        p[32] = 0x09;
+        p[33] = 0x0E;
+        p[40] = 0x1F;
+        p[41] = 0x1E;
+        p[42] = 0x60;
+    });
+
+    if (themeName == "ModernDark") return palModernDark;
+    if (themeName == "RetroGreen") return palRetroGreen;
+    if (themeName == "RetroAmber") return palRetroAmber;
+    if (themeName == "ClassicPaper" || themeName == "BorlandPaper") return palClassicPaper;
+    if (themeName == "DarkViolet") return palDarkViolet;
+    if (themeName == "SlateTeal") return palSlateTeal;
+    if (themeName == "ObsidianBlue") return palObsidianBlue;
+    return palClassicBlue;
+}
+
+TPalette& TTurboCApp::getPalette() const {
+    return getThemePalette(ConfigManager::instance().editor.colorTheme);
 }
 
 TTurboEditWindow* TTurboCApp::openEditor(const char* fileName, Boolean visible) {
@@ -795,28 +1002,40 @@ void TTurboCApp::editorOptions() {
         ConfigManager::instance().saveToFile("turboc.json");
 
         // Apply new editor settings across all open editor windows
-        deskTop->forEach([](TView* v, void*) {
-            TTurboEditWindow* w = dynamic_cast<TTurboEditWindow*>(v);
-            if (w && w->editor) {
-                w->editor->autoIndent = ConfigManager::instance().editor.autoIndent;
-                if (w->gutter) {
-                    if (ConfigManager::instance().editor.showLineNumbers) {
-                        w->gutter->show();
-                        TRect r = w->editor->getBounds();
-                        r.a.x = 7;
-                        w->editor->locate(r);
-                    } else {
-                        w->gutter->hide();
-                        TRect r = w->editor->getBounds();
-                        r.a.x = 1;
-                        w->editor->locate(r);
+        if (deskTop) {
+            deskTop->forEach([](TView* v, void*) {
+                TTurboEditWindow* w = dynamic_cast<TTurboEditWindow*>(v);
+                if (w && w->editor) {
+                    w->editor->autoIndent = ConfigManager::instance().editor.autoIndent;
+                    if (w->gutter) {
+                        if (ConfigManager::instance().editor.showLineNumbers) {
+                            w->gutter->show();
+                            TRect r = w->editor->getBounds();
+                            r.a.x = 7;
+                            w->editor->locate(r);
+                        } else {
+                            w->gutter->hide();
+                            TRect r = w->editor->getBounds();
+                            r.a.x = 1;
+                            w->editor->locate(r);
+                        }
+                        w->gutter->drawView();
                     }
-                    w->gutter->drawView();
+                    w->editor->drawView();
+                    if (w->frame) w->frame->drawView();
+                    w->redraw();
+                } else {
+                    TWindow* win = dynamic_cast<TWindow*>(v);
+                    if (win) {
+                        if (win->frame) win->frame->drawView();
+                        win->redraw();
+                    }
                 }
-                w->editor->drawView();
-                if (w->frame) w->frame->drawView();
-            }
-        }, nullptr);
+            }, nullptr);
+            deskTop->redraw();
+        }
+        if (menuBar) menuBar->drawView();
+        if (statusLine) statusLine->drawView();
         redraw();
     }
     TObject::destroy(dlg);
@@ -1130,7 +1349,7 @@ void TTurboCApp::colorThemes() {
     if (cfg.colorTheme == "ModernDark") currentIdx = 1;
     else if (cfg.colorTheme == "RetroGreen") currentIdx = 2;
     else if (cfg.colorTheme == "RetroAmber") currentIdx = 3;
-    else if (cfg.colorTheme == "BorlandPaper") currentIdx = 4;
+    else if (cfg.colorTheme == "ClassicPaper" || cfg.colorTheme == "BorlandPaper") currentIdx = 4;
     else if (cfg.colorTheme == "DarkViolet") currentIdx = 5;
     else if (cfg.colorTheme == "SlateTeal") currentIdx = 6;
     else if (cfg.colorTheme == "ObsidianBlue") currentIdx = 7;
@@ -1143,25 +1362,37 @@ void TTurboCApp::colorThemes() {
             case 1: cfg.colorTheme = "ModernDark"; break;
             case 2: cfg.colorTheme = "RetroGreen"; break;
             case 3: cfg.colorTheme = "RetroAmber"; break;
-            case 4: cfg.colorTheme = "BorlandPaper"; break;
+            case 4: cfg.colorTheme = "ClassicPaper"; break;
             case 5: cfg.colorTheme = "DarkViolet"; break;
             case 6: cfg.colorTheme = "SlateTeal"; break;
             case 7: cfg.colorTheme = "ObsidianBlue"; break;
             case 0:
-            default: cfg.colorTheme = "BorlandBlue"; break;
+            default: cfg.colorTheme = "ClassicBlue"; break;
         }
         SyntaxHighlighter::instance().setThemeByName(cfg.colorTheme);
         ConfigManager::instance().saveToFile("turboc.json");
 
-        // Redraw all windows
-        deskTop->forEach([](TView* v, void*) {
-            TTurboEditWindow* ew = dynamic_cast<TTurboEditWindow*>(v);
-            if (ew && ew->editor) {
-                ew->editor->drawView();
-                if (ew->gutter) ew->gutter->drawView();
-                if (ew->frame) ew->frame->drawView();
-            }
-        }, nullptr);
+        // Comprehensive redraw of desktop windows, frames, menu bar, status line
+        if (deskTop) {
+            deskTop->forEach([](TView* v, void*) {
+                TTurboEditWindow* ew = dynamic_cast<TTurboEditWindow*>(v);
+                if (ew && ew->editor) {
+                    ew->editor->drawView();
+                    if (ew->gutter) ew->gutter->drawView();
+                    if (ew->frame) ew->frame->drawView();
+                    ew->redraw();
+                } else {
+                    TWindow* win = dynamic_cast<TWindow*>(v);
+                    if (win) {
+                        if (win->frame) win->frame->drawView();
+                        win->redraw();
+                    }
+                }
+            }, nullptr);
+            deskTop->redraw();
+        }
+        if (menuBar) menuBar->drawView();
+        if (statusLine) statusLine->drawView();
         redraw();
     }
     TObject::destroy(dlg);
