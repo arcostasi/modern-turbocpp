@@ -64,6 +64,7 @@ add_executable(test_engine
     source/syntax.cpp
     source/config.cpp
     source/process.cpp
+    source/editor.cpp
 )
 
 target_compile_definitions(test_engine PRIVATE

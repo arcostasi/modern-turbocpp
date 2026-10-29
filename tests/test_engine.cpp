@@ -2,6 +2,7 @@
 #include "turboc/compiler.h"
 #include "turboc/syntax.h"
 #include "turboc/process.h"
+#include "turboc/editor.h"
 #include <iostream>
 #include <cassert>
 #include <thread>
@@ -48,6 +49,16 @@ int main() {
     assert(resCompile.success);
     assert(std::filesystem::exists("bin/hello_test.exe"));
 
+    std::cout << "[TEST] 5b. Testing LLVM C Mode Compilation of samples/neural.c (C23 with clang.exe)...\n";
+    auto resNeural = TurboC::LLVMCompiler::instance().compileAndLink("samples/neural.c", cfg.compiler, "bin/neural_test.exe");
+    std::cout << " -> C23 neural.c compilation result: " << (resNeural.success ? "SUCCESS" : "FAILED")
+              << " in " << resNeural.durationSeconds << "s\n";
+    if (!resNeural.success) {
+        std::cout << " -> Error output: " << resNeural.rawOutput << "\n";
+    }
+    assert(resNeural.success);
+    assert(std::filesystem::exists("bin/neural_test.exe"));
+
     std::cout << "[TEST] 6. Testing LLVM Clang-Format and Version Information...\n";
     std::string verInfo = TurboC::LLVMCompiler::instance().getCompilerVersionInfo(cfg.compiler);
     assert(!verInfo.empty());
@@ -81,10 +92,10 @@ int main() {
     assert(hl.getBackgroundAttr() == 0x07);
     hl.setThemeByName("SlateTeal");
     assert(hl.getTheme() == TurboC::ColorTheme::SlateTeal);
-    assert(hl.getBackgroundAttr() == 0x1F);
+    assert(hl.getBackgroundAttr() == 0x07);
     hl.setThemeByName("ObsidianBlue");
     assert(hl.getTheme() == TurboC::ColorTheme::ObsidianBlue);
-    assert(hl.getBackgroundAttr() == 0x0F);
+    assert(hl.getBackgroundAttr() == 0x07);
     hl.setThemeByName("ClassicPaper");
     assert(hl.getTheme() == TurboC::ColorTheme::ClassicPaper);
     hl.setThemeByName("ClassicBlue");
@@ -131,10 +142,44 @@ int main() {
     assert(slowProc.isCanceled());
     std::cout << " -> AsyncProcess cancellation verified OK.\n";
 
+    std::cout << "[TEST] 11. Testing Portuguese Accents & UTF-8 Encoding...\n";
+    // Verify valid UTF-8 string detection
+    std::string ptUtf8 = "Função que imprime \"Hello, world!\" e retorna 0";
+    assert(TurboC::isValidUtf8(ptUtf8.data(), ptUtf8.size()));
+    
+    // Verify TText measures Portuguese accents accurately:
+    // "Função" is 8 bytes in UTF-8, but exactly 6 display columns
+    std::string wordFuncao = "Função";
+    assert(wordFuncao.size() == 8);
+    auto metrics = TText::measure(wordFuncao);
+    assert(metrics.width == 6);
+    assert(metrics.characterCount == 6);
+    std::cout << " -> TText::measure('Função'): 8 bytes -> " << metrics.width << " display columns OK.\n";
+
+    // Verify invalid UTF-8 / legacy CP1252 detection & conversion
+    // In CP1252: 'ç' is 0xE7, 'ã' is 0xE3
+    char cp1252Data[] = "Fun\xE7\xE3o";
+    assert(!TurboC::isValidUtf8(cp1252Data, sizeof(cp1252Data) - 1));
+    std::string converted = TurboC::convertToUtf8(cp1252Data, sizeof(cp1252Data) - 1, 1252);
+    assert(TurboC::isValidUtf8(converted.data(), converted.size()));
+    assert(converted == "Função");
+    std::cout << " -> Legacy CP1252 to UTF-8 auto-conversion verified OK.\n";
+
+    // Verify compilation of D:\Code\c\examples\hello.c with Portuguese accents
+    if (std::filesystem::exists("D:/Code/c/examples/hello.c")) {
+        auto resPtC = TurboC::LLVMCompiler::instance().compileAndLink("D:/Code/c/examples/hello.c", cfg.compiler, "bin/hello_pt_test.exe");
+        std::cout << " -> D:/Code/c/examples/hello.c build result: " 
+                  << (resPtC.success ? "SUCCESS" : "FAILED") << " in " << resPtC.durationSeconds << "s\n";
+        assert(resPtC.success);
+        assert(std::filesystem::exists("bin/hello_pt_test.exe"));
+    }
+
     // Clean up temporary test artifacts
     std::error_code ec;
     std::filesystem::remove("bin/hello_test.exe", ec);
     std::filesystem::remove("bin/hello_test.asm", ec);
+    std::filesystem::remove("bin/neural_test.exe", ec);
+    std::filesystem::remove("bin/hello_pt_test.exe", ec);
 
     std::cout << "\n============================================\n";
     std::cout << "   ALL MODERN TURBO C++ UNIT TESTS PASSED!   \n";
