@@ -106,7 +106,7 @@ One of the most remarkable aspects of this project is the unprecedented efficien
 | :--- | :--- | :--- |
 | **Target Architecture** | 16-bit Real Mode / DPMI Protected Mode | Native 64-bit x86_64 Windows Architecture |
 | **Compiler Backend** | Proprietary 16-bit 1-pass/2-pass Compiler | **LLVM Clang 23.1** (`clang++`, `clang`, `clang-format`) |
-| **Language Standards** | K&R C, ANSI C89, early pre-standard C++ | **C++23** (`std::print`, `std::ranges`, concepts, attributes) |
+| **Language Standards** | K&R C, ANSI C89, early pre-standard C++ | **C23 & C++23** (Automatic dual-mode: `clang.exe -std=c23` for `.c`, `clang++.exe -std=c++23` for `.cpp`) |
 | **Compiler Execution** | Synchronous process spawning (terminal freeze) | **`AsyncProcess`**: Non-blocking background worker thread |
 | **Safety & Timeout** | Prone to infinite hangs on complex macros | **Configurable Watchdog Timeout** (auto-terminates runaway builds) |
 | **User Interface** | Fixed 80x25 VGA Text Mode | **Windows 11 Terminal** (resizable, truecolor, UTF-8, mouse support) |
@@ -149,7 +149,11 @@ sequenceDiagram
 
 ## 5. Key Modern Features
 
-### 5.1 Modern C++23 Syntax Highlighter & Smart Lexer
+### 5.1 Dual-Language Driver (C23 & C++23) & Smart Lexer
+- **Automatic C & C++ Language Routing**:
+  - Opening a `.c` source file automatically routes compilation through `clang.exe` with standard C flags (default `-std=c23`, configurable to `c17`, `c11`), eliminating the Clang error `error: invalid argument '-std=c++23' not allowed with 'C'`.
+  - Opening a `.cpp`, `.cc`, or `.cxx` file routes compilation through `clang++.exe` with `-std=c++23`.
+  - Both standards are independently configurable in **`Options -> Compiler & LLVM...`** (`C++ Std:` and `C Std:`).
 - **C++23 & C23 Keywords**: Full support for `constexpr`, `consteval`, `concept`, `requires`, `co_await`, `co_yield`, `co_return`, `import`, `module`, etc.
 - **Standard Library Specialization**: Visual distinction for standard types and namespaces (`std::string`, `std::vector`, `std::ranges`, `std::format`, `std::print`, etc.).
 - **Function Identification**: Highlights function declarations and invocations in vivid green (`0x1A` / `0x0A`).
@@ -157,6 +161,7 @@ sequenceDiagram
 - **Raw String Literals**: Full tokenization for `R"delimiter(...)delimiter"` strings.
 - **Interactive Bracket Matching**: Positions cursor over any delimiter `(`, `)`, `[`, `]`, `{`, `}` to instantly highlight its counterpart in bright white on cyan (`0x3F`).
 - **Auto-Closing Delimiters**: Automatically inserts pairs for `(`, `[`, `{`, `"`, `'`, surrounds active selections, and skips closing characters seamlessly.
+- **Full UTF-8 & International Accent Support**: Native multi-byte Unicode handling with automatic detection and seamless auto-conversion for legacy single-byte code pages (Windows-1252 / ISO-8859-1 / CP850). Accented comments and strings in Portuguese (`ç`, `ã`, `é`, `ó`, `ú`, `á`, `ê`, `õ`, etc.) render with pixel-perfect column alignment, zero character corruption, and precise cursor tracking.
 
 ### 5.2 8 Tailored Color Themes
 Switchable on-the-fly via **`Options -> Color Themes...` (`Shift+F10`)** or within **`Options -> Editor settings...`**:
