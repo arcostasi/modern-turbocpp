@@ -144,8 +144,13 @@ std::string LLVMCompiler::buildCommandLine(CompileMode mode,
                                            const CompilerConfig& config,
                                            const std::string& customOutPath) {
     std::filesystem::path src(sourcePath);
-    bool isC = (src.extension() == ".c");
+    std::string ext = src.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    bool isC = (ext == ".c");
+
     std::string compilerExe = isC ? config.getClangPath() : config.getClangxxPath();
+    std::string langStandard = isC ? (config.cStandard.empty() ? "c23" : config.cStandard)
+                                   : (config.cppStandard.empty() ? "c++23" : config.cppStandard);
     std::string dirFlags = buildDirFlags(config);
     std::string target = determineTargetPath(mode, sourcePath, config, customOutPath);
 
@@ -153,22 +158,22 @@ std::string LLVMCompiler::buildCommandLine(CompileMode mode,
         case CompileMode::SyntaxCheck:
             return std::format(
                 "\"{}\" -fsyntax-only -fno-color-diagnostics -std={} {} {} {} \"{}\"",
-                compilerExe, config.cppStandard, config.warningFlags, config.extraFlags, dirFlags, sourcePath
+                compilerExe, langStandard, config.warningFlags, config.extraFlags, dirFlags, sourcePath
             );
         case CompileMode::CompileObj:
             return std::format(
                 "\"{}\" -c -std={} {} {} {} {} \"{}\" -o \"{}\"",
-                compilerExe, config.cppStandard, config.optLevel, config.warningFlags, config.extraFlags, dirFlags, sourcePath, target
+                compilerExe, langStandard, config.optLevel, config.warningFlags, config.extraFlags, dirFlags, sourcePath, target
             );
         case CompileMode::BuildExe:
             return std::format(
                 "\"{}\" -std={} {} {} {} {} \"{}\" -o \"{}\"",
-                compilerExe, config.cppStandard, config.optLevel, config.warningFlags, config.extraFlags, dirFlags, sourcePath, target
+                compilerExe, langStandard, config.optLevel, config.warningFlags, config.extraFlags, dirFlags, sourcePath, target
             );
         case CompileMode::GenerateAssembly:
             return std::format(
                 "\"{}\" -S -masm=intel -std={} {} {} {} {} \"{}\" -o \"{}\"",
-                compilerExe, config.cppStandard, config.optLevel, config.warningFlags, config.extraFlags, dirFlags, sourcePath, target
+                compilerExe, langStandard, config.optLevel, config.warningFlags, config.extraFlags, dirFlags, sourcePath, target
             );
     }
     return "";

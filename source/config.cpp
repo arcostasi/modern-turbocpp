@@ -87,6 +87,7 @@ bool ConfigManager::loadFromFile(const std::string& path) {
         else if (key == "cCompiler") compiler.cCompiler = value;
         else if (key == "clangFormat") compiler.clangFormat = value;
         else if (key == "cppStandard") compiler.cppStandard = value;
+        else if (key == "cStandard") compiler.cStandard = value;
         else if (key == "optLevel") compiler.optLevel = value;
         else if (key == "warningFlags") compiler.warningFlags = value;
         else if (key == "extraFlags") compiler.extraFlags = value;
@@ -132,6 +133,7 @@ bool ConfigManager::saveToFile(const std::string& path) {
     file << std::format("    \"cCompiler\": \"{}\",\n", escapeJson(compiler.cCompiler));
     file << std::format("    \"clangFormat\": \"{}\",\n", escapeJson(compiler.clangFormat));
     file << std::format("    \"cppStandard\": \"{}\",\n", escapeJson(compiler.cppStandard));
+    file << std::format("    \"cStandard\": \"{}\",\n", escapeJson(compiler.cStandard));
     file << std::format("    \"optLevel\": \"{}\",\n", escapeJson(compiler.optLevel));
     file << std::format("    \"warningFlags\": \"{}\",\n", escapeJson(compiler.warningFlags));
     file << std::format("    \"extraFlags\": \"{}\",\n", escapeJson(compiler.extraFlags));

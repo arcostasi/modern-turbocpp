@@ -10,7 +10,8 @@ struct CompilerConfig {
     std::string cxxCompiler = "clang++.exe";
     std::string cCompiler = "clang.exe";
     std::string clangFormat = "clang-format.exe";
-    std::string cppStandard = "c++23";       // c++23, c++20, c++17, c23, c17
+    std::string cppStandard = "c++23";       // c++23, c++20, c++17, c++14, c++11
+    std::string cStandard = "c23";           // c23, c17, c11, c99
     std::string optLevel = "-O2";            // -O0, -O1, -O2, -O3, -Os
     std::string warningFlags = "-Wall -Wextra";
     std::string extraFlags = "-D_CRT_SECURE_NO_WARNINGS";
@@ -33,7 +34,7 @@ struct EditorConfig {
     bool useTabs = false;
     bool autoSyntaxCheckOnSave = true;
     bool autoCloseDelimiters = true;
-    std::string colorTheme = "BorlandBlue"; // ClassicBlue / BorlandBlue (default), ModernDark, RetroGreen, RetroAmber, ClassicPaper, DarkViolet, SlateTeal, ObsidianBlue
+    std::string colorTheme = "ClassicBlue"; // ClassicBlue (default), ModernDark, RetroGreen, RetroAmber, ClassicPaper, DarkViolet, SlateTeal, ObsidianBlue
 };
 
 class ConfigManager {
