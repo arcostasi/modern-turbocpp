@@ -13,6 +13,7 @@ legacy/
 *.ilk
 *.asm
 *.tmp
+*.bak
 *.log
 
 # IDE & OS-specific files
